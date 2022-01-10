@@ -1,7 +1,6 @@
-package us.wh.zlayerdemo
-package domain.model
+package com.caesars.ziotodo.domain.model
 
-import us.wh.zlayerdemo.domain.TodoStore
+import com.caesars.ziotodo.adapters.output.TodoRepoKVStore
 import zio.*
 
 case class Todo(

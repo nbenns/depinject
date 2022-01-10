@@ -1,7 +1,6 @@
-package us.wh.zlayerdemo
-package domain.model
+package com.caesars.ziotodo.domain.model
 
-import us.wh.zlayerdemo.domain.UserStore
+import com.caesars.ziotodo.domain.ports.output.UserRepository
 import zio.*
 
 case class User(
