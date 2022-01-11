@@ -6,7 +6,7 @@ import com.caesars.ziotodo.infra.kvstore.KVStore
 import zio.ZIO
 
 class UserRepoKVStore(repo: KVStore[String, User]) extends UserRepository {
-  override def findById(id: String): ZIO[Any, Nothing, User] =
+  override def findById(id: String): ZIO[Any, Throwable, User] =
     repo
       .get(id)
       .commit

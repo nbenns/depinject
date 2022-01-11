@@ -1,29 +1,45 @@
 package com.caesars.ziotodo
 
-import com.caesars.ziotodo.adapters.output.TodoRepoKVStore
-import com.caesars.ziotodo.domain.Client
-import com.caesars.ziotodo.domain.ports.output.UserRepository
-import com.caesars.ziotodo.infrastructure.DBClient
-import com.caesars.ziotodo.infrastructure.todotable.TodoTable
-import com.caesars.ziotodo.infrastructure.usertable.UserTable
-import com.ceasars.zioapi.domain.UserStore
-import zio.*
+import com.caesars.ziotodo.adapters.output.{TodoRepoKVStore, UserRepoKVStore}
+import com.caesars.ziotodo.domain.model.{Todo, User}
+import com.caesars.ziotodo.domain.ports.output.{TodoRepository, UserRepository}
+import com.caesars.ziotodo.infra.kvstore.KVStore
+import zio._
+import zio.magic._
+import zio.stm.TMap
 
-object Main extends ZIOApp {
-  override type Environment = UserRepository & TodoRepoKVStore
-  override implicit val tag: Tag[Environment] = Tag[Environment]
+object Main extends App {
+  type Environment = UserRepository with TodoRepoKVStore
 
-  override def layer: ZLayer[ZIOAppArgs, Any, UserRepository & TodoRepoKVStore] =
-    ZLayer.wire[UserRepository & TodoRepoKVStore](
-      DBClient.live,
-      UserTable.inMemory,
-      TodoTable.inMemory,
-      UserRepository.live,
-      TodoRepoKVStore.live
+  val userMap: ZLayer[Any, Nothing, Has[TMap[String, User]]] =
+    TMap.make[String, User]().commit.toLayer
+
+  val userStore: ZLayer[Has[TMap[String, User]], Nothing, Has[KVStore[String, User]]] =
+    ZLayer.fromService((map: TMap[String, User]) => new KVStore(map))
+
+  val todoMap: ZLayer[Any, Nothing, Has[TMap[String, Todo]]] =
+    TMap.make[String, Todo]().commit.toLayer
+
+  val todoStore: ZLayer[Has[TMap[String, Todo]], Nothing, Has[KVStore[String, Todo]]] =
+    ZLayer.fromService((map: TMap[String, Todo]) => new KVStore(map))
+
+  val userRepository: ZLayer[Has[KVStore[String, User]], Nothing, Has[UserRepository]] =
+    ZLayer.fromService((store: KVStore[String, User]) => new UserRepoKVStore(store))
+
+  val todoRepository: ZLayer[Has[KVStore[String, Todo]], Nothing, Has[TodoRepository]] =
+    ZLayer.fromService((store: KVStore[String, Todo]) => new TodoRepoKVStore(store))
+
+  def layer: ZLayer[Any, Nothing, Has[UserRepository] with Has[TodoRepository]] =
+    ZLayer.wire[Has[UserRepository] with Has[TodoRepository]](
+      userMap,
+      todoMap,
+      userStore,
+      todoStore,
+      userRepository,
+      todoRepository
     )
+//    (userMap >>> userStore >>> userRepository) ++ (todoMap >>> todoStore >>> todoRepository)
 
-  override def run: ZIO[ZEnv & Environment, Throwable, Unit] =
-    Client
-      .handle(Client.GetUsersTodoList("123"))
-      .flatMap(printLine(_))
+  override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
+    ZIO.unit.exitCode
 }

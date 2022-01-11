@@ -1,20 +1,19 @@
 package com.caesars.ziotodo.adapters.input
 
-import com.caesars.ziotodo.api.user.model.{ApiError, NewUserReq, UserRes}
-import com.caesars.ziotodo.domain.ports.input.UserCommands
-import org.http4s.HttpRoutes
+import com.caesars.ziotodo.api.user.model.{ApiError, UserRes}
+import com.caesars.ziotodo.domain.TodoService
 import sttp.tapir.Endpoint
-import sttp.tapir.server.http4s.Http4sServerInterpreter
-import zio.Task
-import zio.interop.catz._
-import zio.interop.catz.implicits.rts
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import zio._
 
-class BanUserHttp4sRoute(userCommands: UserCommands) {
-  def toRoute(endpoint: Endpoint[Unit, String, ApiError, UserRes, Any]): HttpRoutes[Task] =
-    Http4sServerInterpreter[Task]().toRoutes(endpoint.serverLogic { userId =>
-      userCommands
+class BanUserHttp4sRoute {
+  def toRoute(endpoint: Endpoint[Unit, String, ApiError, UserRes, Any]) = {
+    ZioHttpInterpreter[Has[TodoService]]().toHttp(endpoint.serverLogic { (userId: String) =>
+      TodoService
         .banUser(userId)
         .map(user => UserRes(user.id, user.firstName, user.lastName))
         .map(Right.apply)
+        .catchSome { case _: Throwable => ZIO.left(ApiError("blah")) }
     })
+  }
 }

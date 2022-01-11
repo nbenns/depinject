@@ -25,7 +25,6 @@ lazy val zioApi =
         "io.github.kitlangton" %% "zio-magic" % "0.3.11",
         "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.3",
         "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "0.19.3",
-        "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.19.3",
-        "dev.zio" %% "zio-interop-cats" % "3.2.9.0"
+        "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "0.19.3"
       )
     )
