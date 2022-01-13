@@ -1,7 +1,9 @@
 package com.caesars.ziotodo
 
+import com.caesars.ziotodo.adapters.input.{DomainTodoCommands, DomainUserCommands}
 import com.caesars.ziotodo.adapters.output.{TodoRepoKVStore, UserRepoKVStore}
 import com.caesars.ziotodo.domain.model.{Todo, User}
+import com.caesars.ziotodo.domain.ports.input.{TodoCommands, UserCommands}
 import com.caesars.ziotodo.domain.ports.output.{TodoRepository, UserRepository}
 import com.caesars.ziotodo.infra.kvstore.KVStore
 import zio._
@@ -9,8 +11,6 @@ import zio.magic._
 import zio.stm.TMap
 
 object Main extends App {
-  type Environment = UserRepository with TodoRepoKVStore
-
   val userMap: ZLayer[Any, Nothing, Has[TMap[String, User]]] =
     TMap.make[String, User]().commit.toLayer
 
@@ -23,22 +23,17 @@ object Main extends App {
   val todoStore: ZLayer[Has[TMap[String, Todo]], Nothing, Has[KVStore[String, Todo]]] =
     ZLayer.fromService((map: TMap[String, Todo]) => new KVStore(map))
 
-  val userRepository: ZLayer[Has[KVStore[String, User]], Nothing, Has[UserRepository]] =
-    ZLayer.fromService((store: KVStore[String, User]) => new UserRepoKVStore(store))
-
-  val todoRepository: ZLayer[Has[KVStore[String, Todo]], Nothing, Has[TodoRepository]] =
-    ZLayer.fromService((store: KVStore[String, Todo]) => new TodoRepoKVStore(store))
-
-  def layer: ZLayer[Any, Nothing, Has[UserRepository] with Has[TodoRepository]] =
-    ZLayer.wire[Has[UserRepository] with Has[TodoRepository]](
+  val layer: ZLayer[Any, Nothing, Has[UserCommands] with Has[TodoCommands]] =
+    ZLayer.wire[Has[UserCommands] with Has[TodoCommands]](
       userMap,
       todoMap,
       userStore,
       todoStore,
-      userRepository,
-      todoRepository
+      UserRepoKVStore.asLayer,
+      TodoRepoKVStore.asLayer,
+      DomainUserCommands.asLayer,
+      DomainTodoCommands.asLayer
     )
-//    (userMap >>> userStore >>> userRepository) ++ (todoMap >>> todoStore >>> todoRepository)
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     ZIO.unit.exitCode

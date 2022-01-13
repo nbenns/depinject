@@ -5,7 +5,7 @@ import com.caesars.ziotodo.domain.ports.output.TodoRepository
 import com.caesars.ziotodo.infra.kvstore.KVStore
 import zio._
 
-final case class TodoRepoKVStore(repo: KVStore[String, Todo]) extends TodoRepository {
+final class TodoRepoKVStore(repo: KVStore[String, Todo]) extends TodoRepository {
   def findById(id: String): ZIO[Any, Throwable, Todo] =
     repo
       .get(id)
@@ -24,14 +24,6 @@ final case class TodoRepoKVStore(repo: KVStore[String, Todo]) extends TodoReposi
 }
 
 object TodoRepoKVStore {
-  val live: ZLayer[Has[KVStore[String, Todo]], Nothing, Has[TodoRepoKVStore]] = (TodoRepoKVStore.apply _).toLayer
-
-  def findById(id: String): ZIO[Has[TodoRepoKVStore], Throwable, Todo] =
-    ZIO.serviceWith[TodoRepoKVStore](_.findById(id))
-
-  def findAllForUser(user: User): ZIO[Has[TodoRepoKVStore], Throwable, List[Todo]] =
-    ZIO.serviceWith(_.findAllForUser(user))
-
-  def save(todo: Todo): ZIO[Has[TodoRepoKVStore], Throwable, Unit] =
-    ZIO.serviceWith(_.save(todo))
+  val asLayer: ZLayer[Has[KVStore[String, Todo]], Nothing, Has[TodoRepository]] =
+    ZLayer.fromService(new TodoRepoKVStore(_))
 }
